@@ -1,0 +1,10 @@
+.footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px 24px;
+  padding-top: 16px;
+  border-top: 1px solid var(--grid);
+  color: var(--mute);
+  font: 400 11.5px var(--mono);
+}

@@ -1,0 +1,6 @@
+/* The outlined box every panel is built from. Padding and layout come from the caller. */
+.card {
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+}

@@ -1,0 +1,59 @@
+/* Series colours, in drawing order. Lines, fills and legend swatches all use currentColor. */
+.c1 {
+  color: var(--acc);
+}
+
+.c2 {
+  color: var(--c2);
+}
+
+.c3 {
+  color: var(--c3);
+}
+
+.plot {
+  display: block;
+  width: 100%;
+  border-bottom: 1px solid var(--grid);
+}
+
+.sm {
+  height: 170px;
+}
+
+.md {
+  height: 200px;
+}
+
+.lg {
+  height: 210px;
+}
+
+.line {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+
+.thin {
+  stroke-width: 1.5;
+}
+
+.area {
+  fill: currentColor;
+  fill-opacity: 0.14;
+}
+
+.axis {
+  display: flex;
+  justify-content: space-between;
+  color: var(--mute);
+  font: 400 11px var(--mono);
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+}

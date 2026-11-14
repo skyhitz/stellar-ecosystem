@@ -1,0 +1,312 @@
+/* ── Global view ───────────────────────────────────────────── */
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.search {
+  flex: 1 1 220px;
+  min-height: 44px;
+  padding: 11px 12px;
+  border: 1px solid var(--in);
+  border-radius: var(--r);
+  outline: none;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.search:focus,
+.search:focus-visible {
+  border-color: var(--acc);
+  outline: none;
+}
+
+.categories {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.category {
+  padding: 8px 12px;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.04em;
+}
+
+.tableCard {
+  overflow-x: auto;
+}
+
+.tableScroll {
+  min-width: 900px;
+}
+
+/* Checkbox, project, then eight metric columns. */
+.head,
+.row {
+  display: grid;
+  grid-template-columns: 34px minmax(150px, 1.7fr) repeat(8, minmax(76px, 1fr));
+  align-items: center;
+  gap: 8px;
+  border-bottom: 1px solid var(--grid);
+}
+
+.head {
+  padding: 6px 16px;
+}
+
+.row {
+  padding: 10px 16px;
+  font: 400 12.5px var(--mono);
+}
+
+.row:hover {
+  background: var(--grid);
+}
+
+/* The header cell is a grid so its sort button fills it. */
+.headCell {
+  display: grid;
+}
+
+.sort {
+  padding: 8px 0;
+  border: 0;
+  background: none;
+  color: var(--mute);
+  cursor: pointer;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-align: right;
+  text-transform: uppercase;
+}
+
+.sortLeft {
+  text-align: left;
+}
+
+.sortActive {
+  color: var(--acc);
+}
+
+.sort:hover {
+  color: var(--fg);
+}
+
+.pickCell {
+  display: flex;
+  align-items: center;
+}
+
+.pick {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--in);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--cta-fg);
+  cursor: pointer;
+  font: 700 12px var(--mono);
+}
+
+.pick[aria-checked="true"] {
+  background: var(--cta-bg);
+}
+
+.projectName {
+  color: var(--fg);
+  font-weight: 600;
+}
+
+.projectCategory {
+  color: var(--mute);
+  font-size: 11px;
+}
+
+.number {
+  text-align: right;
+}
+
+.empty {
+  padding: 28px 16px;
+  color: var(--mute);
+  text-align: center;
+}
+
+/* ── Compare ───────────────────────────────────────────────── */
+
+.pickChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.pickChip {
+  min-height: 40px;
+  padding: 9px 13px;
+  border: 1px solid var(--in);
+  border-radius: var(--pill);
+  background: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  font: 500 11.5px var(--mono);
+}
+
+.pickChip[aria-pressed="true"] {
+  border-color: var(--acc);
+  color: var(--fg);
+}
+
+/* Keeps the label in place when a project has no series colour. */
+.noSwatch {
+  color: transparent;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 14px;
+}
+
+.metricCell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.metricHead {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  font: 400 12.5px var(--mono);
+}
+
+.metricValue {
+  font-weight: 600;
+}
+
+.track {
+  height: 6px;
+  background: var(--grid);
+}
+
+.fill {
+  height: 6px;
+  background: currentColor;
+}
+
+/* ── Admin ─────────────────────────────────────────────────── */
+
+.mode {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px;
+}
+
+.modeText {
+  flex: 1 1 260px;
+}
+
+.sectionTitle {
+  font: 600 14px var(--mono);
+}
+
+.adminColumns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  align-items: start;
+  gap: 14px;
+}
+
+.projects {
+  display: flex;
+  flex-direction: column;
+  padding: 16px;
+}
+
+.projectsTitle {
+  padding-bottom: 10px;
+}
+
+.projectRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 56px;
+  padding: 10px 0;
+  border-top: 1px solid var(--grid);
+}
+
+.adminName {
+  font: 600 13px var(--mono);
+}
+
+.adminStatus {
+  font: 400 11px var(--mono);
+}
+
+.rowActions {
+  display: flex;
+  gap: 6px;
+}
+
+.keysHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* Shown once, right after a key is generated. */
+.newKey {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 12px;
+  border: 1px dashed var(--acc);
+}
+
+.newKeyHint {
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.newKeyValue {
+  color: var(--acc);
+  font: 500 12.5px var(--mono);
+  word-break: break-all;
+}
+
+.keyRow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--grid);
+}
+
+.keyPrefix {
+  font: 500 12.5px var(--mono);
+}
+
+.keyMeta {
+  color: var(--mute);
+  font: 400 11px var(--mono);
+}
+
+.revoked {
+  color: var(--mute);
+  font: 500 11px var(--mono);
+  text-transform: uppercase;
+}

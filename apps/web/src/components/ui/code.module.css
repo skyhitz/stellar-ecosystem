@@ -1,0 +1,15 @@
+.code {
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--grid);
+  border-radius: var(--r);
+  background: var(--bg);
+  color: var(--acc);
+  font: 400 12px/1.6 var(--mono);
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.roomy {
+  line-height: 1.65;
+}

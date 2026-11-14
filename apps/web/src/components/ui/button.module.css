@@ -1,0 +1,95 @@
+.button {
+  border-radius: var(--pill);
+  cursor: pointer;
+}
+
+/* A <button> centres its label natively; a link needs to be told. */
+a.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}
+
+/* Filled call to action. */
+.primary,
+.primary:hover {
+  border: 1px solid var(--cta-bg);
+  background: var(--cta-bg);
+  color: var(--cta-fg);
+}
+
+.primary:hover {
+  filter: brightness(1.1);
+}
+
+/* Outlined secondary action. */
+.ghost {
+  border: 1px solid var(--in);
+  background: transparent;
+  color: var(--fg);
+}
+
+.ghost:hover {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+/* Sizes for primary and ghost buttons. */
+.lg,
+.md,
+.sm {
+  font: 600 13px var(--body);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.lg {
+  min-height: 44px;
+  padding: 13px 22px;
+}
+
+.md {
+  min-height: 44px;
+  padding: 11px 18px;
+  font-size: 12px;
+}
+
+.sm {
+  padding: 9px 14px;
+  font-size: 11px;
+}
+
+/* Compact outlined button used inside cards and lists. */
+.outline {
+  padding: 8px 12px;
+  border: 1px solid var(--in);
+  background: none;
+  color: var(--fg);
+  font: 500 11px var(--mono);
+  text-transform: uppercase;
+}
+
+.outline:hover {
+  border-color: var(--acc);
+  color: var(--acc);
+}
+
+.outline.danger,
+.outline.danger:hover {
+  border-color: var(--bad);
+  color: var(--bad);
+}
+
+/* Borderless, low-emphasis action. */
+.text {
+  min-height: 44px;
+  padding: 13px 8px;
+  border: 0;
+  background: none;
+  color: var(--mute);
+}
+
+.text:hover {
+  color: var(--fg);
+}

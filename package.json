@@ -1,0 +1,17 @@
+{
+  "name": "stellar-ecosystem",
+  "private": true,
+  "description": "Stellar Ecosystem Stats: web and API analytics for projects built on Stellar.",
+  "scripts": {
+    "dev": "pnpm --filter @ses/web dev",
+    "build": "pnpm --filter @ses/web build",
+    "start": "pnpm --filter @ses/web start",
+    "lint": "pnpm -r lint",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test"
+  },
+  "engines": {
+    "node": ">=20.9"
+  },
+  "packageManager": "pnpm@10.28.0"
+}

@@ -1,0 +1,34 @@
+/* Shared text styles. They set only type and colour, so they combine freely with layout classes. */
+
+/* Small uppercase label: card titles, KPI labels, table headers, form labels. */
+.eyebrow {
+  color: var(--mute);
+  font: 500 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* The "// SECTION / PAGE" line above a title. */
+.crumb {
+  color: var(--mute);
+  font: 500 12px var(--mono);
+  letter-spacing: 0.1em;
+}
+
+.title {
+  margin: 6px 0 0;
+  font: var(--hw) var(--h2) / 1.1 var(--disp);
+  letter-spacing: var(--ls);
+  text-transform: uppercase;
+}
+
+/* Muted supporting text. */
+.note {
+  margin: 0;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.pretty {
+  text-wrap: pretty;
+}

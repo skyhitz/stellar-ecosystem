@@ -1,0 +1,27 @@
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.input {
+  min-height: 44px;
+  padding: 12px;
+  border: 1px solid var(--in);
+  border-radius: var(--r);
+  outline: none;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+.input:focus,
+.input:focus-visible {
+  border-color: var(--acc);
+  outline: none;
+}
+
+/* Always rendered, even when empty, so a message does not shift the layout around it. */
+.error {
+  color: var(--bad);
+  font-size: 12px;
+}

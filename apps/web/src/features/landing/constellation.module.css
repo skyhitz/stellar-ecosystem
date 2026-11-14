@@ -1,0 +1,129 @@
+.constellation {
+  display: block;
+  width: 100%;
+  margin-top: -20px;
+  overflow: visible;
+}
+
+.ring,
+.spoke,
+.flow {
+  stroke: var(--acc);
+}
+
+/* Faint links between neighbouring projects. */
+.ring {
+  stroke-width: 1;
+  opacity: 0.13;
+}
+
+/* Each project's connection to the hub. */
+.spoke {
+  stroke-width: 1;
+  opacity: 0.3;
+}
+
+/* Dashes travelling along each spoke toward the hub. Duration is set per line. */
+.flow {
+  stroke-width: 1.5;
+  stroke-dasharray: 3 25;
+  animation: flow linear infinite;
+}
+
+.pulse,
+.halo {
+  fill: none;
+  stroke: var(--acc);
+  stroke-width: 1;
+}
+
+.pulse {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse 2.8s ease-out infinite;
+}
+
+.halo {
+  opacity: 0.4;
+}
+
+.hub,
+.node {
+  fill: var(--acc);
+}
+
+/* Duration and delay are set per node. */
+.node {
+  animation: twinkle ease-in-out infinite;
+}
+
+.hubLabel,
+.hubCaption,
+.nodeLabel,
+.nodeCaption {
+  text-anchor: middle;
+}
+
+.hubLabel {
+  fill: var(--acc);
+  font: 700 12px var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.hubCaption {
+  fill: var(--mute);
+  font: 500 8.5px var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.nodeLabel {
+  fill: var(--fg);
+  font: 500 9.5px var(--mono);
+  letter-spacing: 0.1em;
+}
+
+.nodeCaption {
+  fill: var(--mute);
+  font: 400 8.5px var(--mono);
+  letter-spacing: 0.08em;
+}
+
+@keyframes pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.7;
+  }
+
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@keyframes flow {
+  to {
+    stroke-dashoffset: -28;
+  }
+}
+
+@keyframes twinkle {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow,
+  .pulse {
+    display: none;
+  }
+
+  .node {
+    animation: none;
+  }
+}

@@ -1,0 +1,144 @@
+/*
+ * Design tokens for the "Terminal" direction: monospace type, outlined boxes,
+ * square corners and a faint scanline texture, in Stellar Community Fund purple.
+ * Dark is the default theme; light overrides the colour tokens only.
+ */
+:root {
+  color-scheme: dark;
+
+  --bg: #06050a;
+  --fg: #eeeaff;
+  --mute: #a297cf;
+  --acc: #b3a2ff;
+  --acc2: #7c5cff;
+  --card: rgba(179, 162, 255, 0.05);
+  --line: rgba(179, 162, 255, 0.38);
+  --in: rgba(179, 162, 255, 0.38);
+  --grid: rgba(179, 162, 255, 0.13);
+  --cta-bg: #b3a2ff;
+  --cta-fg: #06050a;
+  --ok: #7fe0b3;
+  --warn: #f0cf6a;
+  --bad: #ff8f8f;
+  /* Second and third series colours in charts. */
+  --c2: #fdda24;
+  --c3: #7fe0b3;
+  --tex: repeating-linear-gradient(0deg, rgba(179, 162, 255, 0.04) 0 1px, transparent 1px 4px);
+
+  --disp: var(--font-display), sans-serif;
+  --body: var(--font-mono), monospace;
+  --mono: var(--font-mono), monospace;
+
+  /* Heading weight and tracking. */
+  --hw: 800;
+  --ls: -0.02em;
+  /* Corner radius of boxes and of buttons. */
+  --r: 0px;
+  --pill: 0px;
+  /* Type scale. `cqw` is relative to the page frame, see .frame. */
+  --fs: 13px;
+  --h1: clamp(32px, 6.4cqw, 80px);
+  --h1lh: 1.04;
+  --h2: clamp(18px, 2.6cqw, 24px);
+  /* KPI value size. */
+  --kv: 24px;
+}
+
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg: #f4f1fc;
+  --fg: #15102b;
+  --mute: #5d5480;
+  --acc: #5234d1;
+  --acc2: #7c5cff;
+  --card: rgba(82, 52, 209, 0.04);
+  --line: rgba(82, 52, 209, 0.42);
+  --in: rgba(82, 52, 209, 0.42);
+  --grid: rgba(82, 52, 209, 0.13);
+  --cta-bg: #5234d1;
+  --cta-fg: #fff;
+  --ok: #0f7a4d;
+  --warn: #8a6400;
+  --bad: #b3261e;
+  --c2: #a06a00;
+  --c3: #0f7a4d;
+  --tex: repeating-linear-gradient(0deg, rgba(82, 52, 209, 0.035) 0 1px, transparent 1px 4px);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg);
+  background-image: var(--tex);
+  color: var(--fg);
+  font-family: var(--body);
+  font-size: var(--fs);
+  line-height: 1.5;
+}
+
+a {
+  color: var(--acc);
+}
+
+a:hover {
+  color: var(--fg);
+}
+
+input,
+select,
+button {
+  font: inherit;
+}
+
+::placeholder {
+  color: #757575;
+  opacity: 1;
+}
+
+:focus-visible {
+  outline: 2px solid var(--acc);
+  outline-offset: 2px;
+}
+
+/* Page frame: centred, and the container that `cqw` units resolve against. */
+.frame {
+  max-width: 1320px;
+  min-height: 100vh;
+  margin: 0 auto;
+  container-type: inline-size;
+}
+
+.column,
+.column > main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.column {
+  padding: 18px clamp(14px, 3cqw, 36px) 56px;
+}
+
+/* Text for screen readers only. */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}

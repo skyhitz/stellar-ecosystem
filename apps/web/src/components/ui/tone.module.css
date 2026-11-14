@@ -1,0 +1,20 @@
+/* Semantic text colours. Each class sets only `color`. */
+.ok {
+  color: var(--ok);
+}
+
+.warn {
+  color: var(--warn);
+}
+
+.bad {
+  color: var(--bad);
+}
+
+.accent {
+  color: var(--acc);
+}
+
+.mute {
+  color: var(--mute);
+}

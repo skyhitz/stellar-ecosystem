@@ -1,0 +1,9 @@
+packages:
+  - apps/*
+
+# pnpm runs a dependency's install script only if it is allowed. These two are
+# deliberately not: the app does not use next/image (sharp), and unrs-resolver
+# works from its prebuilt optional packages.
+ignoredBuiltDependencies:
+  - sharp
+  - unrs-resolver

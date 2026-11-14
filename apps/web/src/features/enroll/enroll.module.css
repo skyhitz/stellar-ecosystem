@@ -1,0 +1,94 @@
+.enroll {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+/* Progress through the wizard: reached steps are highlighted. */
+.steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step {
+  flex: 1 1 150px;
+  padding-top: 8px;
+  border-top: 2px solid var(--grid);
+  color: var(--mute);
+  font: 500 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.reached {
+  border-top-color: var(--acc);
+  color: var(--acc);
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 22px;
+}
+
+.kinds {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.kindOptions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.kind {
+  flex: 1 1 200px;
+  padding: 14px;
+  border: 1px solid var(--in);
+  border-radius: var(--r);
+  background: transparent;
+  color: var(--fg);
+  cursor: pointer;
+  text-align: left;
+}
+
+.kind[aria-checked="true"] {
+  border-color: var(--acc);
+  background: var(--grid);
+}
+
+.kindTitle {
+  display: block;
+  font: 600 13px var(--mono);
+}
+
+.kindHint {
+  display: block;
+  color: var(--mute);
+  font-size: 12px;
+}
+
+.panelTitle {
+  font: 600 14px var(--mono);
+}
+
+.body {
+  margin: 0;
+  color: var(--mute);
+}
+
+.actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}

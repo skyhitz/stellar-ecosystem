@@ -1,0 +1,50 @@
+/* A row of mutually exclusive options sharing one outline. */
+.group {
+  display: flex;
+  overflow: hidden;
+  border: 1px solid var(--in);
+  border-radius: var(--pill);
+}
+
+.item,
+.item:hover {
+  border: 0;
+  background: transparent;
+  color: var(--mute);
+  cursor: pointer;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.item[aria-pressed="true"],
+.item[aria-current="true"] {
+  background: var(--acc);
+  color: var(--bg);
+}
+
+/* The group clips its children, so the focus ring is drawn inside the item. */
+.item:focus-visible {
+  outline: 2px solid var(--fg);
+  outline-offset: -3px;
+}
+
+.item[aria-pressed="true"]:focus-visible,
+.item[aria-current="true"]:focus-visible {
+  outline-color: var(--bg);
+}
+
+.sm {
+  padding: 9px 12px;
+}
+
+.md {
+  min-height: 40px;
+  padding: 10px 13px;
+}
+
+.lg {
+  min-height: 44px;
+  padding: 11px 14px;
+}

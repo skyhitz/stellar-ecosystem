@@ -1,0 +1,77 @@
+.header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 20px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r);
+  background: var(--card);
+}
+
+.brand,
+.brand:hover {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  color: var(--acc);
+  font: 500 15px var(--mono);
+  text-decoration: none;
+}
+
+.tabs {
+  display: flex;
+  flex: 1 1 auto;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.tab {
+  padding: 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--mute);
+  font: 500 12px var(--mono);
+  letter-spacing: 0.08em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.tab[aria-current="page"] {
+  border-bottom-color: var(--acc);
+  color: var(--acc);
+}
+
+.tab:hover {
+  color: var(--fg);
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.theme {
+  padding: 9px 12px;
+  border: 1px solid var(--in);
+  border-radius: var(--pill);
+  background: none;
+  color: var(--fg);
+  cursor: pointer;
+  font: 500 11px var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+/* The toggle names the theme it switches to. Both labels are rendered and the
+   current theme picks one, so the label is right before React hydrates. */
+.toLight,
+.toDark {
+  display: none;
+}
+
+:global(html:not([data-theme="light"])) .toLight,
+:global(html[data-theme="light"]) .toDark {
+  display: inline;
+}

@@ -1,0 +1,44 @@
+/* Vertical rhythm shared by the dashboard screens. */
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* A card's inner layout: padded column. Modifiers below adjust spacing. */
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+}
+
+.gap8 {
+  gap: 8px;
+}
+
+.gap9 {
+  gap: 9px;
+}
+
+.gap12 {
+  gap: 12px;
+}
+
+.gap14 {
+  gap: 14px;
+}
+
+.pad18 {
+  padding: 18px;
+}
+
+.pad22 {
+  padding: 22px;
+}
+
+/* Two items pushed to opposite ends of a row. */
+.between {
+  display: flex;
+  justify-content: space-between;
+}
