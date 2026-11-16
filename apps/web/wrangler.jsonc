@@ -1,0 +1,13 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // Static site: `pnpm run deploy` builds with STATIC_EXPORT=1 and uploads `out/`.
+  "name": "stellar-ecosystem-stats",
+  "compatibility_date": "2026-11-01",
+  "assets": {
+    "directory": "./out",
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "404-page"
+  },
+  "routes": [{ "pattern": "stellarstats.skyhitz.io", "custom_domain": true }],
+  "workers_dev": false
+}
