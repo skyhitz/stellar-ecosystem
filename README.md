@@ -57,7 +57,7 @@ page is prerendered, so the deploy is a static export (`STATIC_EXPORT=1 next
 build` writes `apps/web/out/`) uploaded as Workers static assets.
 
 ```sh
-pnpm deploy       # builds the static export and runs `wrangler deploy`
+pnpm run deploy   # builds the static export and runs `wrangler deploy`
 ```
 
 Wrangler needs to be signed in (`npx wrangler login`) or given
