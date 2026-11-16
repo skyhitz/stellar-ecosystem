@@ -1,6 +1,6 @@
 export type RangeKey = "24H" | "7D" | "30D" | "90D" | "12M";
 
-export type Category = "DeFi" | "Payments" | "Wallets" | "Music" | "Tooling";
+export type Category = "DeFi" | "Payments" | "Wallets" | "Tooling";
 
 /** Semantic colour of a value. Maps to the --ok / --warn / --bad / --acc / --mute tokens. */
 export type Tone = "ok" | "warn" | "bad" | "accent" | "mute";

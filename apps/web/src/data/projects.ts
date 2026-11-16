@@ -5,7 +5,7 @@ import type { Category, Project } from "./types";
  * Replace this module with calls to the analytics API when one exists.
  */
 export const PROJECTS: readonly Project[] = [
-  { id: "skyhitz", name: "Skyhitz", category: "Music", pageViews: 412000, visitors: 96400, bounceRate: 38, sessionSeconds: 184, botShare: 3.1, apiRequests: 5200000, latencyP95Ms: 240, errorRate: 0.6 },
+  { id: "skyhitz", name: "Skyhitz", category: "DeFi", pageViews: 412000, visitors: 96400, bounceRate: 38, sessionSeconds: 184, botShare: 3.1, apiRequests: 5200000, latencyP95Ms: 240, errorRate: 0.6 },
   { id: "nebula", name: "Nebula DEX", category: "DeFi", pageViews: 688000, visitors: 121000, bounceRate: 44, sessionSeconds: 212, botShare: 6.4, apiRequests: 9100000, latencyP95Ms: 310, errorRate: 1.2 },
   { id: "orbit", name: "Orbit Pay", category: "Payments", pageViews: 254000, visitors: 71800, bounceRate: 51, sessionSeconds: 96, botShare: 2.2, apiRequests: 6800000, latencyP95Ms: 180, errorRate: 0.4 },
   { id: "lend", name: "Lumen Lend", category: "DeFi", pageViews: 143000, visitors: 30200, bounceRate: 47, sessionSeconds: 240, botShare: 4.8, apiRequests: 2400000, latencyP95Ms: 420, errorRate: 2.1 },
@@ -15,7 +15,7 @@ export const PROJECTS: readonly Project[] = [
   { id: "comet", name: "Comet SDK Docs", category: "Tooling", pageViews: 76000, visitors: 33100, bounceRate: 58, sessionSeconds: 132, botShare: 5.0, apiRequests: 0, latencyP95Ms: 0, errorRate: 0 },
 ];
 
-export const CATEGORIES: readonly Category[] = ["DeFi", "Payments", "Wallets", "Music", "Tooling"];
+export const CATEGORIES: readonly Category[] = ["DeFi", "Payments", "Wallets", "Tooling"];
 
 /** The project the tenant screens show. Comes from the signed-in session once auth exists. */
 export const TENANT_PROJECT = PROJECTS[0];

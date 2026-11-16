@@ -37,7 +37,7 @@
   --pill: 0px;
   /* Type scale. `cqw` is relative to the page frame, see .frame. */
   --fs: 13px;
-  --h1: clamp(32px, 6.4cqw, 80px);
+  --h1: clamp(28px, 6.4cqw, 64px);
   --h1lh: 1.04;
   --h2: clamp(18px, 2.6cqw, 24px);
   /* KPI value size. */

@@ -36,8 +36,8 @@ export function LandingScreen() {
         <div className={styles.pitch}>
           <div className={cx(text.crumb, styles.kicker)}>{"// A shared service for the Stellar Community Fund"}</div>
           <h1 className={styles.headline}>
-            <span className={styles.highlight}>Real usage</span> for projects built on{" "}
-            <span className={styles.highlight}>Stellar</span>
+            <span className={styles.highlight}>Stellar</span> Ecosystem{" "}
+            <span className={styles.highlight}>Analytics</span>
           </h1>
           <p className={styles.lede}>
             Privacy-first web analytics and OpenTelemetry API metrics for every project in the ecosystem. One snippet,
