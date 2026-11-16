@@ -8,7 +8,9 @@
     "start": "next start",
     "lint": "eslint",
     "typecheck": "next typegen && tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "deploy": "pnpm run build:static && wrangler deploy",
+    "build:static": "STATIC_EXPORT=1 next build"
   },
   "dependencies": {
     "next": "16.4.6",
@@ -27,6 +29,7 @@
     "eslint-config-next": "16.4.6",
     "jsdom": "^31.0.1",
     "typescript": "^5",
-    "vitest": "^5.1.0"
+    "vitest": "^5.1.0",
+    "wrangler": "^4.163.0"
   }
 }

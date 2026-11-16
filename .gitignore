@@ -22,3 +22,7 @@ coverage/
 npm-debug.log*
 .pnpm-debug.log*
 .vercel
+
+# cloudflare
+.wrangler/
+.dev.vars*

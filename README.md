@@ -49,6 +49,20 @@ Other commands, all run from the repository root:
 
 See [`apps/web/README.md`](apps/web/README.md) for how the app is organized.
 
+## Deploying
+
+The site is live at https://stellarstats.skyhitz.io, served by the Cloudflare
+Worker `stellar-ecosystem-stats` (config in `apps/web/wrangler.jsonc`). Every
+page is prerendered, so the deploy is a static export (`STATIC_EXPORT=1 next
+build` writes `apps/web/out/`) uploaded as Workers static assets.
+
+```sh
+pnpm deploy       # builds the static export and runs `wrangler deploy`
+```
+
+Wrangler needs to be signed in (`npx wrangler login`) or given
+`CLOUDFLARE_API_TOKEN` and `CLOUDFLARE_ACCOUNT_ID`.
+
 ## Before launch
 
 These are placeholders in the UI today:
