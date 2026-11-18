@@ -4,8 +4,12 @@
 > on demo data. Everything else in this document is the planned design: event
 > ingestion, the OpenTelemetry pipeline, sign-in, tenant isolation, the metrics
 > API and on-chain activity. Each component below is marked live or planned.
-> The collector configuration in section 3.2 has been validated end to end with
-> OpenTelemetry Collector v0.165 and VictoriaMetrics v1.156.
+> The API metrics path in section 3.2 (collector config, metrics writer and SQL)
+> was tested end to end with OpenTelemetry Collector v0.165 and PostgreSQL 16.
+>
+> This design answers SCF's RFP "Web and API Analytics for Stellar Ecosystem
+> Projects". [Appendix A](#appendix-a-rfp-requirements) maps each requirement to
+> the section that covers it.
 
 ## Contents
 
@@ -17,17 +21,21 @@
 6. [Data model](#6-data-model)
 7. [Privacy and data handling](#7-privacy-and-data-handling)
 8. [Deployment and operations](#8-deployment-and-operations)
-9. [Repository layout](#9-repository-layout)
-10. [Connecting the web app](#10-connecting-the-web-app)
-11. [Key decisions](#11-key-decisions)
-12. [Order of work](#12-order-of-work)
-13. [Open questions and risks](#13-open-questions-and-risks)
+9. [Service levels, support and handover](#9-service-levels-support-and-handover)
+10. [Repository layout](#10-repository-layout)
+11. [Connecting the web app](#11-connecting-the-web-app)
+12. [Key decisions](#12-key-decisions)
+13. [Order of work](#13-order-of-work)
+14. [Open questions and risks](#14-open-questions-and-risks)
+
+[Appendix A. RFP requirements](#appendix-a-rfp-requirements)
 
 ## 1. Context and goals
 
 Stellar Ecosystem Stats (SES) is a shared analytics service for projects funded
 by the Stellar Community Fund (SCF). It answers one question for SCF reviewers
-and for the projects themselves: how much real usage does each project get?
+and for the projects themselves: how much real usage does each project get? We
+build it, run it for 12 months, then hand it over to SCF.
 
 It measures two things:
 
@@ -53,8 +61,12 @@ It measures two things:
    table compares like with like.
 4. Strict tenant isolation: a project sees only its own data.
 5. Stellar-native identity: sign in with a Stellar account, no passwords.
-6. Cheap to run, so the service stays free for ecosystem projects.
+6. Free for projects and SCF, and cheap enough to run that it stays that way.
 7. Open source, built on maintained open-source components.
+8. Reliable: 99.99% ingestion and 99.9% dashboard availability during the
+   service window (section 9).
+9. Easy to hand over: one monorepo with infrastructure-as-code, so SCF can
+   rebuild everything from it.
 
 **Non-goals**
 
@@ -75,16 +87,15 @@ flowchart TB
 
   subgraph cf["Cloudflare edge: stellarstats.skyhitz.io"]
     webapp["Web app<br/>static export"]
-    gateway["Edge Worker and KV<br/>/collect, /otlp, /api"]
+    gateway["Edge Worker<br/>/e, /otlp, /api"]
     files["Tracker script<br/>and stellar.toml"]
   end
 
   subgraph eu["Origin in Frankfurt, EU: no public ports"]
     umami["Umami<br/>web analytics"]
     collector["OTel Collector<br/>spans to metrics"]
-    sesapi["SES API<br/>sign-in, tenancy, jobs"]
-    pg[("PostgreSQL")]
-    vm[("VictoriaMetrics")]
+    sesapi["SES API<br/>sign-in, tenancy,<br/>metrics writer, jobs"]
+    pg[("PostgreSQL<br/>web events,<br/>API metrics")]
   end
 
   subgraph stellar["Stellar network"]
@@ -101,18 +112,17 @@ flowchart TB
   gateway -->|"cleaned events"| umami
   gateway -->|"traces + tenant id"| collector
   gateway -->|"/api requests"| sesapi
+  collector -->|"counters, histograms"| sesapi
   umami --> pg
-  collector --> vm
   sesapi --> pg
   sesapi -->|"web stats"| umami
-  sesapi -->|"PromQL"| vm
   sesapi -->|"(5)"| horizon
   sesapi -->|"(5)"| rpc
 
   classDef live stroke-width:3px
   classDef planned stroke-dasharray:6 4
   class webapp live
-  class files,gateway,umami,collector,sesapi,pg,vm planned
+  class files,gateway,umami,collector,sesapi,pg planned
 ```
 
 **How to read it:** the thick border is live today, dashed borders are planned,
@@ -122,7 +132,8 @@ The system has three zones:
 
 - **Cloudflare edge** (global). Serves the web app and the tracker, and is the
   only public entry point. It filters events, checks keys and forwards requests
-  to the origin. It stores no event data.
+  to the origin. It keeps no event data, apart from a buffer in an EU-only
+  storage bucket while the origin is unreachable.
 - **Origin in Frankfurt** (EU). Runs the analytics engines and the SES API and
   holds all stored data. It has no public ports: Cloudflare Tunnel connects it
   to the edge.
@@ -132,13 +143,12 @@ The system has three zones:
 | Component | Technology | Responsibility | Status |
 | --- | --- | --- | --- |
 | Web app | Next.js 16, React 19, TypeScript, CSS Modules, static export | Public site, tenant dashboards, operator console | Live, demo data |
-| Edge Worker | Cloudflare Workers, Workers KV, Workers Analytics Engine | Serves static files, event gateway, OTLP gateway, proxy to the SES API | Planned |
+| Edge Worker | Cloudflare Workers, Workers KV, R2 (EU), Workers Analytics Engine | Serves static files, event gateway, OTLP gateway, buffer during origin outages, proxy to the SES API | Planned |
 | Tracker | Small browser script built from Umami's MIT-licensed tracker | Sends page views and custom events | Planned |
 | Umami | Umami, self-hosted at a pinned version | Stores web events, computes web stats | Planned |
-| OpenTelemetry Collector | Custom collector build (core and contrib components) | Turns project spans into request counts and latency histograms, then drops the spans | Planned, config validated |
-| VictoriaMetrics | VictoriaMetrics single-node | Stores API metrics for 24 months, answers PromQL | Planned, validated |
-| SES API | TypeScript on Node.js | SEP-10 sign-in, tenancy, enrollment, keys, erasure, read API, scheduled jobs | Planned |
-| PostgreSQL | Managed PostgreSQL in Frankfurt | `umami` database (Umami's own) and `ses` database (ours) | Planned |
+| OpenTelemetry Collector | Custom collector build (core and contrib components) | Turns project spans into request counts and latency histograms, then drops the spans | Planned, tested end to end |
+| SES API | TypeScript on Node.js | SEP-10 sign-in, tenancy, enrollment, keys, erasure, read API, metrics writer, scheduled jobs | Planned, writer prototyped |
+| PostgreSQL | Managed PostgreSQL in Frankfurt | `umami` database (Umami's own) and `ses` database (ours, including API metrics) | Planned, schema tested |
 
 ## 3. Data flows
 
@@ -146,23 +156,32 @@ The system has three zones:
 
 1. **Load.** The project's page loads the tracker from
    `https://stellarstats.skyhitz.io/v/{version}/app.js`. Every version has its
-   own immutable URL, and the tag carries a Subresource Integrity hash, so the
-   script never changes under a project without them editing the tag. The
+   own immutable URL, the tag carries a Subresource Integrity hash, and the
+   script never loads other code, so it can't change under a project without
+   them editing the tag. Each release's hash is published in the changelog. The
    response sends `Access-Control-Allow-Origin: *`, which the tag's
    `crossorigin="anonymous"` needs for the integrity check to pass.
 2. **Send.** The tracker posts page views (client-side route changes included,
-   through the History API) and custom events to `POST /collect`, tagged with
-   the project's `data-site` id.
+   through the History API) and custom events to `POST /e`, tagged with the
+   project's `data-site` id.
+   - It reads only the page URL and the referrer. It never reads screen size or
+     language.
+   - It sends nothing when the visitor has opted out (a flag set only when they
+     opt out on the project's privacy page) or when the browser sends Global
+     Privacy Control.
+   - An optional one-line helper for Stellar Wallets Kit sends a
+     `wallet_connect` event with the wallet type, never the address.
 3. **Filter at the edge.** The Edge Worker runs these steps in order:
 
    | Step | What happens |
    | --- | --- |
    | Site check | Looks up `data-site` in KV. The site must be active, and the request's `Origin` must match the domain registered at enrollment. |
    | Browser check | Rejects requests without browser fetch metadata (`Sec-Fetch-*` headers), with bot user agents or from known datacenter networks, and applies rate limits. This is the "events are only accepted from browser execution" rule on the Setup screen. Each rejection is counted per site and reason in Workers Analytics Engine, and that count is the operator table's Bot % column. |
-   | Allowlist fields | Keeps the page path but drops the query string and fragment, reduces the referrer to its domain, drops page title, screen size and language, and drops Umami's visitor `id` field. Only the `event` type is accepted, so `identify` calls are refused. |
+   | Allowlist fields | Keeps the page path but drops the query string and fragment, and reduces the referrer to its domain. Drops page title, screen size, language and Umami's visitor `id` field if a modified tracker sends them. Only the `event` type is accepted, so `identify` calls are refused. |
    | Pseudonymize | Replaces the visitor's IP with HMAC-SHA-256 over the site id and the IP, keyed with a random key for the current UTC day. The SES API creates each day's key in advance, and KV deletes it one hour after its day ends. Once the key is gone, nobody, including us, can map a stored session back to an IP. |
    | Country | Sets the `cf-ipcountry` header from Cloudflare's own lookup (`request.cf.country`). Region and city are never forwarded. |
    | Forward | Sends the event to Umami's `/api/send` through the tunnel, with the pseudonym in the header Umami reads the client IP from. |
+   | Buffer | If the origin can't be reached, writes the cleaned event to an R2 bucket restricted to the EU. A job replays it when the origin is back. |
 
 4. **Store.** Umami derives a session from the pseudonym and the user agent,
    parses browser and device class, and writes the event to PostgreSQL. Umami
@@ -174,6 +193,11 @@ The system has three zones:
    | `CLIENT_IP_HEADER` | `x-ses-visitor` | Umami hashes the edge's pseudonym and never sees an IP |
    | `DISABLE_TELEMETRY` | `1` | No calls home |
    | `PRIVATE_MODE` | `1` | Blocks Umami's external network calls |
+
+**Ad blockers.** The names `/v/{version}/app.js` and `/e` avoid the patterns ad
+blockers filter on, and CI checks them against EasyList and EasyPrivacy. A
+project that also wants to avoid blocking by domain can serve both from its own
+domain through a proxy rule.
 
 The result: the full IP never leaves Cloudflare's edge, and sessions can't be
 linked across sites or days.
@@ -189,11 +213,13 @@ linked across sites or days.
    up in KV and refuses unknown or revoked keys with `401`. It applies a
    per-project rate limit and body size cap, removes the key header and adds
    `x-ses-tenant: <project id>`. Only `/otlp/v1/traces` is accepted, so logs and
-   metrics endpoints never reach the origin.
+   metrics endpoints never reach the origin. If the origin can't be reached,
+   the batch goes to the EU buffer and is replayed later.
 3. **Convert spans to metrics.** The collector keeps server spans, plus client
    spans that our Stellar instrumentation marks (see 3.4). It stamps the tenant
    from the edge's header, normalizes routes, turns spans into a request counter
-   and a latency histogram, and drops the spans:
+   and a latency histogram, and drops the spans. Every minute it sends only the
+   counts since its previous flush (delta temporality) to the metrics writer:
 
 ```yaml
 receivers:
@@ -249,6 +275,8 @@ processors:
 connectors:
   spanmetrics:
     namespace: ses
+    aggregation_temporality: AGGREGATION_TEMPORALITY_DELTA # each flush carries only new counts
+    metrics_flush_interval: 60s
     histogram:
       unit: ms
       explicit:
@@ -263,8 +291,10 @@ connectors:
       - name: stellar.method
 
 exporters:
-  prometheusremotewrite:
-    endpoint: http://victoriametrics:8428/api/v1/write
+  # The metrics writer (part of the SES API) adds each flush to hourly rows in PostgreSQL.
+  otlphttp/writer:
+    endpoint: http://ses-api:4319
+    encoding: json
 
 service:
   pipelines:
@@ -275,36 +305,73 @@ service:
     metrics:
       receivers: [spanmetrics]
       processors: [batch]
-      exporters: [prometheusremotewrite]
+      exporters: [otlphttp/writer]
 ```
 
-4. **Store.** VictoriaMetrics keeps the series for 24 months
-   (`-retentionPeriod=24M`). A stored series looks like this:
+4. **Store.** The collector has no PostgreSQL exporter, so a small metrics
+   writer in the SES API receives its output on an internal port. It adds each
+   flush to one row per project, hour, route and status code:
 
-```text
-ses_calls_total{ses_tenant="skyhitz", service_name="skyhitz-api", span_kind="SPAN_KIND_SERVER",
-                http_request_method="GET", http_route="/v1/accounts/{g_address}",
-                http_response_status_code="200"}
+```sql
+-- One row per project, hour, service, route and status code. Counts add up.
+CREATE TABLE api_metrics_hourly (
+  tenant          text             NOT NULL,
+  hour            timestamptz      NOT NULL,
+  service         text             NOT NULL DEFAULT '',
+  span_kind       text             NOT NULL,  -- 'server', or 'client' for Stellar calls
+  method          text             NOT NULL DEFAULT '',
+  route           text             NOT NULL DEFAULT '',
+  status_code     smallint         NOT NULL DEFAULT 0,
+  stellar_api     text             NOT NULL DEFAULT '',
+  stellar_method  text             NOT NULL DEFAULT '',
+  requests        bigint           NOT NULL,
+  duration_ms_sum double precision NOT NULL,
+  buckets         bigint[]         NOT NULL, -- requests per latency bucket, same bounds as the collector
+  PRIMARY KEY (tenant, hour, service, span_kind, method, route, status_code, stellar_api, stellar_method)
+) PARTITION BY RANGE (hour);
+
+-- Monthly partitions: a job creates the next ones and drops those older than 24 months.
+CREATE TABLE api_metrics_hourly_2026_11 PARTITION OF api_metrics_hourly
+  FOR VALUES FROM ('2026-11-01') TO ('2026-12-01');
 ```
 
-The API dashboard needs only a few queries. The SES API adds the
-`ses_tenant` selector itself, from the signed-in session:
+Request counts, latency sums and bucket counts add up across flushes, so each
+row is final once its hour ends. Monthly partitions turn the 24-month retention
+into dropping old partitions. Two helpers do the math: `sum_buckets` adds bucket
+counts across rows, and `bucket_quantile` interpolates a percentile inside a
+bucket, the same method Prometheus uses.
 
-```promql
-# Requests in the selected range
-sum(increase(ses_calls_total{ses_tenant="skyhitz", span_kind="SPAN_KIND_SERVER"}[30d]))
+The API dashboard needs only a few queries. The SES API sets the tenant itself,
+from the signed-in session:
 
-# p95 latency per route
-histogram_quantile(0.95, sum by (le, http_request_method, http_route) (
-  increase(ses_duration_milliseconds_bucket{ses_tenant="skyhitz", span_kind="SPAN_KIND_SERVER"}[30d])))
+```sql
+-- Requests, p95 latency and error rate for the selected range.
+-- Error rate is the share of 5xx responses; 4xx is shown separately as a status class.
+SELECT sum(requests) AS requests,
+       bucket_quantile(0.95, '{10,25,50,100,250,500,1000,2500,5000,10000}', sum_buckets(buckets)) AS p95_ms,
+       100.0 * sum(requests) FILTER (WHERE status_code >= 500) / sum(requests) AS error_rate
+FROM api_metrics_hourly
+WHERE tenant = $1 AND span_kind = 'server' AND hour >= now() - interval '30 days';
 
-# Error rate: share of responses with a 5xx status. 4xx is shown separately as a status class.
-100 * sum(increase(ses_calls_total{ses_tenant="skyhitz", span_kind="SPAN_KIND_SERVER", http_response_status_code=~"5.."}[30d]))
-    / sum(increase(ses_calls_total{ses_tenant="skyhitz", span_kind="SPAN_KIND_SERVER"}[30d]))
+-- p50 and p95 latency per route
+SELECT method, route, sum(requests) AS requests,
+       bucket_quantile(0.50, '{10,25,50,100,250,500,1000,2500,5000,10000}', sum_buckets(buckets)) AS p50_ms,
+       bucket_quantile(0.95, '{10,25,50,100,250,500,1000,2500,5000,10000}', sum_buckets(buckets)) AS p95_ms
+FROM api_metrics_hourly
+WHERE tenant = $1 AND span_kind = 'server' AND hour >= now() - interval '30 days'
+GROUP BY method, route
+ORDER BY requests DESC;
+
+-- Status code distribution
+SELECT status_code / 100 AS status_class, sum(requests) AS requests
+FROM api_metrics_hourly
+WHERE tenant = $1 AND span_kind = 'server' AND hour >= now() - interval '30 days'
+GROUP BY status_class
+ORDER BY status_class;
 ```
 
-**What the end-to-end test showed.** Sample spans went through the config above
-into VictoriaMetrics and came out as expected:
+**What the end-to-end test showed.** Sample spans went through the config
+above, a prototype writer and PostgreSQL 16, and came out as expected:
 
 - `/v1/accounts/GA7Q…` was stored as `/v1/accounts/{g_address}`,
   `/tracks/48213/` as `/tracks/{id}`, and a 64-character hex hash as `{hash}`.
@@ -313,7 +380,16 @@ into VictoriaMetrics and came out as expected:
 - A span that claimed `ses.tenant="spoofed"` was stored under the tenant from
   the verified key.
 - Host names never reached storage.
-- The queries above returned request counts, per-route p95 and the 5xx share.
+- The queries returned the request count, the 5xx share, the status classes and
+  the p95 per route. Every number matched an earlier run of the same spans
+  through a Prometheus-compatible database.
+
+**Sizing.** The RFP's design target is about 1 million requests a day across
+all projects, about 12 per second on average. The collector counts in memory,
+so the writer's load depends on the number of active route and status
+combinations, not on traffic. With 1,000 combinations, the writer upserts up to
+1,000 rows a minute, and storage grows by about 9 million rows a year, a few
+gigabytes. A load test at the target volume is part of milestone 2.
 
 **Things projects need to know**
 
@@ -332,10 +408,10 @@ into VictoriaMetrics and came out as expected:
   session cookie applies and no CORS setup is needed.
 - **Tenant screens.** The SES API calls Umami's API
   (`/api/websites/{id}/stats`, `/pageviews`, `/metrics?type=referrer|country|device|browser`)
-  and VictoriaMetrics (PromQL), then shapes the results into the types the
-  screens already use (`WebAnalytics` and `ApiAnalytics` in `apps/web/src/data`).
-  The Umami website id and tenant label come from the session's project, never
-  from the request.
+  and queries `api_metrics_hourly`, then shapes the results into the types the
+  screens already use (`WebAnalytics` and `ApiAnalytics` in
+  `apps/web/src/data`). The Umami website id and the tenant come from the
+  session's project, never from the request.
 - **Operator screens and the public landing page.** These read a rollup table
   refreshed every hour: for each project and each range (7D, 30D, 90D, 12M),
   the operator table columns. Unique visitors don't add up across days, so the
@@ -444,14 +520,17 @@ sequenceDiagram
 
 Isolation is enforced in one place, the SES API, and checked at each layer:
 
-- **One read path.** Umami, VictoriaMetrics and PostgreSQL have no public
-  endpoints. All reads go through the SES API.
+- **One read path.** Umami and PostgreSQL have no public endpoints. All reads
+  go through the SES API.
 - **Server-side identity.** The tenant always comes from a verified key or the
   session, never from the request. The collector overwrites any `ses.tenant`
   attribute a project sends (tested, see 3.2).
-- **Scoped queries.** Every PromQL query gets its `ses_tenant` selector, and
-  every Umami call its website id, from the SES API. Every PostgreSQL query
-  filters by project.
+- **Scoped queries.** Every API metrics query filters on `tenant`, and every
+  Umami call uses the project's website id, both taken from the session by the
+  SES API. Every other PostgreSQL query filters by project too.
+- **Defense in depth.** The SES API's database role uses PostgreSQL row-level
+  security on project data, so a query that forgets its project filter returns
+  nothing.
 - **Tests.** Every endpoint has a test that asserts another tenant's data
   returns `403`.
 
@@ -477,6 +556,7 @@ The `ses` database:
 | `linked_addresses` | project id, address, kind, verified by, sync cursor | Kind is `account` or `contract` |
 | `ingest_keys` | project id, prefix, key hash, created at, revoked at | |
 | `api_keys` | prefix, key hash, label, created by, created at, revoked at | Label such as "SCF traction review" |
+| `api_metrics_hourly` | tenant, hour, service, span kind, method, route, status code, Stellar API and method, requests, latency sum, latency buckets | Partitioned by month, see 3.2 |
 | `erasure_requests` | id (`ER-0013`), project id, scope, target, status, requested by | Status is `queued` or `completed` |
 | `settings` | enrollment mode | `self` or `approval` |
 | `rollups` | project id, range, operator table columns, computed at | Refreshed hourly |
@@ -496,28 +576,54 @@ The `ses` database:
 
 | Never stored | Enforced by |
 | --- | --- |
-| Cookies or local storage identifiers | The tracker sets none |
+| Cookies or local storage identifiers | The tracker sets none. The only thing it may store is the visitor's own opt-out. |
 | Full IP addresses | The edge replaces the IP before forwarding, so the origin never sees one |
 | Cross-site or cross-day identifiers | Daily pseudonym key, site id in the pseudonym, Umami's `id` field dropped |
+| Screen size and language | The tracker never reads them, and the edge drops them |
 | Traces, spans and logs | The collector has no trace or log exporter, and the edge accepts only `/otlp/v1/traces` |
 
 - **Retention.** Web events and API metrics are kept for 24 months. A nightly
-  job deletes older web events, and VictoriaMetrics expires old samples itself.
-  Database backups are kept for 30 days, so erased data leaves the backups
-  within 30 days.
-- **Erasure.** Requests are queued, run by a job, then marked `completed`, and
+  job deletes older web events, and API metrics partitions older than 24 months
+  are dropped. Database backups are kept for 30 days, so erased data leaves the
+  backups within 30 days. Buffered payloads are deleted as soon as they're
+  replayed.
+- **Erasure.** Visitors can't be identified, since the daily key that could
+  link them is deleted, so erasure requests come from projects for the data
+  they sent. Requests are queued, run by a job, then marked `completed`, and
   the rollups are recomputed.
 
-  | Scope | Web data (Umami) | API metrics (VictoriaMetrics) |
+  | Scope | Web data (Umami) | API metrics |
   | --- | --- | --- |
   | Custom event property | Deletes the matching event data | Not applicable: no custom properties |
-  | Date range | Deletes the site's events in the range | Not applicable: aggregates only, no personal data |
-  | All data for this site | Deletes all of the site's events | Deletes every series with the project's tenant label (`/api/v1/admin/tsdb/delete_series`) |
+  | Date range | Deletes the site's events in the range | Deletes the project's rows in the range |
+  | All data for this site | Deletes all of the site's events | Deletes all of the project's rows |
 
-- **Data residency.** All stored data stays in Frankfurt. The edge processes
-  requests worldwide but stores no events. KV holds only the site registry, key
-  hashes and the daily pseudonym key, and Analytics Engine holds only rejection
-  counts per site.
+- **Data residency.** All stored data stays in Frankfurt, and the edge buffer is
+  an R2 bucket restricted to the EU. The edge processes requests worldwide but
+  stores nothing else: KV holds only the site registry, key hashes and the
+  daily pseudonym key, and Analytics Engine holds only rejection counts per
+  site.
+
+**Consent and jurisdictions.** The RFP asks for GDPR compliance without a
+client-side opt-in. Two sets of rules apply: GDPR, and the ePrivacy Directive's
+consent rule for reading or storing information on a device. The EDPB's
+guidelines on that rule (2/2023, version 2.0, October 2024) say JavaScript that
+makes the browser send information falls within it, so being cookieless doesn't
+settle the question on its own. Exemptions for privacy-friendly analytics come
+from national rules, so the design meets the strictest common conditions:
+measurement only, anonymous aggregate statistics, no cross-site tracking, no
+reuse of the data for our own purposes, and a visitor opt-out.
+
+- **France:** designed for the CNIL's audience measurement exemption.
+- **UK:** designed for the analytics exemption added by the Data (Use and
+  Access) Act 2025, in force since February 2026.
+- **Rest of the EU and EEA:** positions differ, and some regulators (German
+  ones, for example) have generally treated analytics as needing consent. The
+  compliance statement will list where no opt-in is compliant and where it
+  isn't, after legal review.
+
+The SCF view has to fit the "no reuse" condition: under the enrollment terms,
+each project shares its own anonymous aggregate statistics with SCF.
 
 ## 8. Deployment and operations
 
@@ -526,25 +632,28 @@ The `ses` database:
 - Worker `stellar-ecosystem-stats` on the custom domain
   `stellarstats.skyhitz.io`, configured in `apps/web/wrangler.jsonc`. Today it
   serves the Next.js static export as static assets.
-- Planned: Worker code for `/collect`, `/otlp/*` and `/api/*`, run before the
-  asset lookup only for those paths (`assets.run_worker_first`). Bindings for
-  KV, Analytics Engine and rate limiting, plus the tunnel's service token as a
-  secret.
+- Planned: Worker code for `/e`, `/otlp/*` and `/api/*`, run before the asset
+  lookup only for those paths (`assets.run_worker_first`). Bindings for KV, an
+  R2 bucket in the EU jurisdiction, Analytics Engine and rate limiting, plus
+  the tunnel's service token as a secret.
 - Headers: `/_next/static/*` immutable (live), `/v/*` immutable with
   `Access-Control-Allow-Origin: *`, and `/.well-known/stellar.toml` with
   `Access-Control-Allow-Origin: *`.
 
 **Origin** (planned)
 
-- One Frankfurt VM to start, running Docker Compose: `umami`, `ses-api`,
-  `ses-jobs`, `otel-collector`, `victoriametrics` and `cloudflared`, with
+- One Frankfurt VM to start, running Docker Compose: `umami`, `ses-api` (with
+  the metrics writer), `ses-jobs`, `otel-collector` and `cloudflared`, with
   managed PostgreSQL in the same region and point-in-time recovery.
 - No public inbound ports. `cloudflared` opens an outbound tunnel, and requests
   from the Worker carry a Cloudflare Access service token.
 - Umami's own admin interface is reachable only by operators through Cloudflare
   Access, for debugging.
-- Scale vertically first, then move VictoriaMetrics and the collector to their
-  own hosts.
+- Scale vertically first, then move the collector to its own host.
+
+**Infrastructure as code.** Cloudflare resources (Worker, KV, R2, DNS, Tunnel
+and Access) are defined with OpenTofu, and the origin with Docker Compose, all
+in the monorepo, so SCF can rebuild the whole system from it.
 
 **Scheduled jobs** (`ses-jobs`)
 
@@ -554,38 +663,68 @@ The `ses` database:
 | On-chain sync | Every 5 minutes | Reads Horizon and Stellar RPC into `onchain_daily` |
 | Erasure | Every minute | Runs queued erasure requests |
 | Retention | Nightly | Deletes web events older than 24 months |
+| Partitions | Monthly | Creates next month's API metrics partition and drops those older than 24 months |
+| Buffer replay | Every minute while the buffer isn't empty | Re-sends buffered payloads to the origin, oldest first |
 | Pseudonym key | Daily | Writes the next UTC day's key to KV, set to expire an hour after that day ends |
 | KV sync | On every change, plus an hourly full pass | Site registry, key hashes and project status |
 | Cardinality check | Daily | Flags projects whose routes aren't normalizing |
 
-**CI/CD** (planned). GitHub Actions runs lint, typecheck, tests, builds and
-`otelcol validate` on every pull request. On merge, it deploys the edge with
-`wrangler deploy` and rolls out new origin images. Today, deploys are manual
-with `pnpm run deploy`.
+**CI/CD** (planned). GitHub Actions runs lint, typecheck, tests, builds,
+`otelcol validate` and the ad-blocker check on tracker names on every pull
+request. On merge, it deploys the edge with `wrangler deploy` and rolls out new
+origin images. Today, deploys are manual with `pnpm run deploy`.
 
-**Monitoring SES itself.** The collector and VictoriaMetrics expose their own
-metrics, which VictoriaMetrics scrapes. External uptime checks hit `/collect`
-and `/otlp`. Alerts cover ingest errors, spans refused by the collector, disk
-usage on PostgreSQL and VictoriaMetrics, and rollups that stop refreshing.
+**Monitoring SES itself.** External uptime checks hit `/e`, `/otlp` and the
+dashboard every minute. Alerts cover ingest errors, spans refused by the
+collector, a growing edge buffer, PostgreSQL disk usage, and rollups that stop
+refreshing. The services' own health metrics go through the same pipeline under
+an internal tenant.
 
-## 9. Repository layout
+## 9. Service levels, support and handover
+
+The RFP asks us to run the service for 12 months from SCF's approval of the
+final tranche, then hand it over.
+
+| Target | Commitment | How the design meets it |
+| --- | --- | --- |
+| Ingestion availability | 99.99% | Ingestion runs on Cloudflare's edge, which accepts events and spans even when the origin is down, buffers them in the EU and replays them |
+| Dashboard availability | 99.90% | The app is static on the edge. The origin uses managed PostgreSQL with point-in-time recovery and can be rebuilt from the monorepo. |
+| Critical and high vulnerabilities | Patched within 24 hours | Automated dependency and container image scanning, with alerts to the maintainers |
+| Support tickets | Answered within 5 business days, resolved within 10 | Public GitHub issue tracker |
+
+**Handover**, between months 6 and 12 of the service window, when SCF decides:
+
+1. Transfer the GitHub repository to SCF.
+2. SCF rebuilds the infrastructure in its own accounts from the monorepo
+   (OpenTofu and Docker Compose).
+3. Migrate the data: dump the `umami` and `ses` databases, restore them into
+   SCF's PostgreSQL, and check the totals per project.
+4. Switch traffic. `stellarstats.skyhitz.io` is a subdomain of skyhitz.io, so it
+   can't be transferred: it becomes a permanent redirect or forwarding rule to
+   SCF's domain, so existing tracker tags and collector configs keep working
+   while projects update them.
+5. Rotate the secrets, including the SEP-10 signing key, to keys SCF controls.
+
+## 10. Repository layout
 
 ```text
 apps/
   web/            Next.js app: public site, tenant dashboards, operator console (live)
-  edge/           Cloudflare Worker: gateway and static assets (planned; the deploy config moves here)
-  api/            SES API and scheduled jobs (planned)
+  edge/           Cloudflare Worker: gateway, buffer and static assets (planned; the deploy config moves here)
+  api/            SES API, metrics writer and scheduled jobs (planned)
 packages/
   tracker/        Browser tracker built from Umami's tracker (planned)
   otel-stellar/   OpenTelemetry instrumentation for Horizon and Stellar RPC calls (planned)
 infra/
+  cloudflare/     OpenTofu for the Worker, KV, R2, DNS, Tunnel and Access (planned)
   collector/      Collector build manifest and config (planned)
   origin/         Docker Compose for the Frankfurt host (planned)
 docs/
   ARCHITECTURE.md This document
+                  Runbooks, onboarding guide, compliance statement and handover plan (planned)
 ```
 
-## 10. Connecting the web app
+## 11. Connecting the web app
 
 The UI was built so a backend can replace the demo data without changing the
 screens. These are the changes:
@@ -596,8 +735,10 @@ screens. These are the changes:
 - **Roles.** The Public / Tenant / Operator switch in the header is replaced by
   the signed-in session's role, and `TENANT_PROJECT` comes from the session.
 - **Enrollment.** A "Connect wallet" step comes first, and that account becomes
-  the project owner. The Verify step polls `/api/projects/{id}/first-event`
-  instead of "Simulate first event".
+  the project owner. When a project measures both its website and its API, the
+  install step shows both snippets (today it shows only the script tag). The
+  Verify step polls `/api/projects/{id}/first-event` instead of "Simulate first
+  event".
 - **Admin.** Keys are issued by the API, which replaces `createDemoKey`.
   Removing a project sets its status to `removed`, and the edge stops accepting
   its data within about a minute.
@@ -605,48 +746,80 @@ screens. These are the changes:
   `stellarstats.skyhitz.io`, the tracker versions and integrity hash become
   real, and the OTLP endpoint becomes `https://stellarstats.skyhitz.io/otlp`.
 - **Privacy copy.** `apps/web/src/data/privacy.ts` is updated to match
-  section 7.
+  section 7. "No opt-in needed: EU/EEA, UK" becomes the jurisdiction statement,
+  and "24 months+" becomes "24 months".
 
-## 11. Key decisions
+## 12. Key decisions
 
 | Decision | Why | Trade-off |
 | --- | --- | --- |
 | Umami for web analytics | It's cookieless and privacy-first, MIT-licensed, built for many sites under one operator, and light to run on just TypeScript and PostgreSQL, so we can offer it free to every SCF project. | Its defaults are looser than our promise (region and city, monthly salt), so the edge and configuration enforce the stricter rules. |
 | API metrics derived from spans in our collector | Projects already export traces. Adding an exporter needs no code changes and keeps their APM. | Spans travel over the network, and counts depend on unsampled spans (see 3.2). |
-| VictoriaMetrics for API metrics | Single binary, PromQL with histogram quantiles, compact storage for 24 months, accepts remote write from the collector. | One more datastore next to PostgreSQL. Prometheus is weaker for long retention, and ClickHouse is heavier to run. |
+| PostgreSQL for API metrics | The RFP specifies it. Its target of about 1 million requests a day is small for PostgreSQL once the collector has done the counting, and one database is simpler to back up, run and hand over. | The collector has no PostgreSQL exporter, so we maintain a small writer. A dedicated time-series database such as VictoriaMetrics would scale further, but it adds a second datastore. |
 | Privacy enforced at the edge, not by patching Umami | Umami stays upstream and easy to upgrade, and full IPs never reach the origin. | Relies on Umami's documented settings, which must be rechecked on every Umami upgrade. |
 | Static web app with a separate API, on one domain | The app is fully prerendered, so static assets are fast and simple. We tried the OpenNext adapter for running Next.js on Workers, and requests hung with Next.js 16.4. | Data loads in the browser after sign-in, so screens need loading states. |
 | Sign-in with SEP-10, then SEP-45 | Identities match the accounts projects already use with SCF, and there are no passwords to store. | Every user needs a Stellar wallet, which fits this audience. |
-| One EU region for storage | Matches the data residency in the compliance statement, while the edge keeps ingestion fast worldwide. | Single-region availability. OTLP exporters retry when the origin is down, but web events sent during an outage are lost unless we add a queue (see 13). |
+| One EU region for storage, with an EU buffer at the edge | Matches the data residency in the compliance statement. The edge keeps ingestion fast worldwide and available during origin outages. | Dashboards depend on the single origin, which is why their target is 99.9% rather than 99.99%. |
 
-## 12. Order of work
+## 13. Order of work
 
-| Phase | Scope | Outcome |
-| --- | --- | --- |
-| 0, done | Web app on demo data, deployed | Live at stellarstats.skyhitz.io |
-| 1 | Edge gateway, tracker, Umami, enrollment, SEP-10 sign-in | Skyhitz sends real web data, tenant web dashboard on live data |
-| 2 | OTLP ingestion, collector, VictoriaMetrics | Tenant API dashboard on live data |
-| 3 | Rollups, metrics API keys, erasure and retention jobs | Operator console and metrics API on live data |
-| 4 | On-chain sync, Stellar call instrumentation, SEP-45 | On-chain activity next to web and API usage |
+| Milestone | Due | Scope | Outcome |
+| --- | --- | --- | --- |
+| 0, done | | Web app on demo data, deployed | Live at stellarstats.skyhitz.io |
+| 1 (tranche 1) | Dec 18, 2026 | EU infrastructure as code, edge gateway, tracker, Umami, SEP-10 sign-in, enrollment | Skyhitz sends real web data, tenant web dashboard on live data |
+| 2 (tranche 2) | Jan 18, 2027 | OTLP ingestion, collector, metrics writer, API dashboard, Stellar call instrumentation, Wallets Kit events | Skyhitz's API metrics live, instrumentation published on npm |
+| 3 (tranche 3) | Feb 18, 2027 | Operator console and metrics API on live data, on-chain activity, erasure and retention, edge buffer, monitoring, documentation | Mainnet launch with at least 3 SCF projects on web analytics and 1 on API analytics |
+| Service window | 12 months from SCF's approval of tranche 3 | Hosting, support and security patches | Service levels in section 9 |
+| Handover | Months 6 to 12 of the window | Repository, infrastructure and data | SCF runs the service |
 
-## 13. Open questions and risks
+## 14. Open questions and risks
 
 1. **Hosting provider** for the Frankfurt origin.
-2. **Privacy copy.** The privacy screen says country is "derived from an IP with
+2. **License.** The RFP requires an OSI-approved open-source license. MIT is
+   proposed, matching Umami. The repo doesn't have a license file yet.
+3. **Domain.** `stellarstats.skyhitz.io` can only be redirected at handover,
+   not transferred. A dedicated domain from the start would make the handover
+   cleaner.
+4. **Consent position.** The jurisdiction list in the compliance statement needs
+   legal review (section 7).
+5. **Privacy copy.** The privacy screen says country is "derived from an IP with
    the last octet dropped". With this design, the IP never leaves the edge,
    which is stronger but needs different wording. Umami also records the
    operating system from the user agent, which should either be added to the
-   stored list or stripped at the edge. The opt-in jurisdictions are still "To
-   be declared".
-3. **Public figures.** The landing page shows page views per project. Which
+   stored list or stripped at the edge.
+6. **Public figures.** The landing page shows page views per project. Which
    figures may be public, and should projects opt in?
-4. **Contract ownership.** Contracts are confirmed by an operator today. Can
+7. **Contract ownership.** Contracts are confirmed by an operator today. Can
    ownership be verified automatically, for example from the contract's admin
    or deployer?
-5. **Outage buffering.** Should web events be queued at the edge (Cloudflare
-   Queues) while the origin is unreachable?
-6. **On-chain backfill.** Horizon covers account history, but contract events
+8. **On-chain backfill.** Horizon covers account history, but contract events
    older than RPC's window need another source, such as SDF's Hubble dataset.
-7. **Spike before building.** Check against the pinned Umami version that it
+9. **Spike before building.** Check against the pinned Umami version that it
    reads the country from `cf-ipcountry`, accepts the pseudonym in
    `CLIENT_IP_HEADER`, and never falls back to a GeoIP lookup on it.
+
+## Appendix A. RFP requirements
+
+| RFP requirement | Where it's covered |
+| --- | --- |
+| Multi-tenant platform that SCF runs as a shared service, built on Umami or GoatCounter with a stated rationale | 1, 2, 12 |
+| Events only from frontend instrumentation, with bot mitigation that tells browser execution from server-side posts | 3.1 |
+| Easy integration for static HTML, single-page apps and server-rendered sites | 3.1, Setup screen |
+| Versioned, pinned tracker with no remote updates, and a supply-chain defense | 3.1 |
+| Tracker and endpoint names that avoid ad blockers | 3.1 |
+| GDPR compliance without client-side opt-in, with non-compliant jurisdictions stated, data residency declared and tenant-triggered erasure | 7 |
+| Page views, unique visitors, referrers, session duration, bounce rate, country, device and browser | 3.1, 3.3 |
+| Custom events and Stellar Wallets Kit capture (nice to have) | 3.1 |
+| Private tenant dashboard and global operator dashboard with filtering, sorting and comparison | 3.3 |
+| OpenTelemetry dual export, with traces, spans and logs discarded and counters and histograms stored in PostgreSQL | 3.2 |
+| Tenant and service, normalized route, status code and latency, with hard-coded normalization rules | 3.2 |
+| About 1 million requests a day, with aggregates kept at least 24 months | 3.2, 7 |
+| Request volume, status code distribution and p50/p95 latency per tenant, compared across projects | 3.2, 3.3 |
+| Strict tenant isolation, with global-view credentials for SCF operators | 4, 5 |
+| Self-service enrollment, removal of non-ecosystem projects and an approval mode | 3.3, 6, 11 |
+| API keys for machine consumers, generated and revoked by operators | 3.3, 5 |
+| Zero fees | 1 |
+| Monorepo with code, infrastructure-as-code, docs, runbooks, onboarding guide, tests, compliance docs and monitoring | 8, 10 |
+| Live adoption: at least 3 SCF projects on web analytics and 1 on API analytics, with operator and tenant views | 13 |
+| 12-month hosting and support window, service levels and handover | 9 |
+| OSI-approved open-source license | 14 (to add) |
