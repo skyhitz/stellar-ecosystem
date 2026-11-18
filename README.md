@@ -27,6 +27,9 @@ apps/
 ```
 
 Services and infrastructure will sit alongside `apps/web` as they are added.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) describes the full planned
+system: ingestion, the OpenTelemetry pipeline, sign-in with Stellar, tenant
+isolation, privacy handling and deployment.
 
 ## Getting started
 
