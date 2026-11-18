@@ -713,7 +713,7 @@ apps/
   edge/           Cloudflare Worker: gateway, buffer and static assets (planned; the deploy config moves here)
   api/            SES API, metrics writer and scheduled jobs (planned)
 packages/
-  tracker/        Browser tracker built from Umami's tracker (planned)
+  tracker/        Browser tracker built from Umami's MIT-licensed tracker, keeping its notice (planned)
   otel-stellar/   OpenTelemetry instrumentation for Horizon and Stellar RPC calls (planned)
 infra/
   cloudflare/     OpenTofu for the Worker, KV, R2, DNS, Tunnel and Access (planned)
@@ -775,26 +775,24 @@ screens. These are the changes:
 ## 14. Open questions and risks
 
 1. **Hosting provider** for the Frankfurt origin.
-2. **License.** The RFP requires an OSI-approved open-source license. MIT is
-   proposed, matching Umami. The repo doesn't have a license file yet.
-3. **Domain.** `stellarstats.skyhitz.io` can only be redirected at handover,
+2. **Domain.** `stellarstats.skyhitz.io` can only be redirected at handover,
    not transferred. A dedicated domain from the start would make the handover
    cleaner.
-4. **Consent position.** The jurisdiction list in the compliance statement needs
+3. **Consent position.** The jurisdiction list in the compliance statement needs
    legal review (section 7).
-5. **Privacy copy.** The privacy screen says country is "derived from an IP with
+4. **Privacy copy.** The privacy screen says country is "derived from an IP with
    the last octet dropped". With this design, the IP never leaves the edge,
    which is stronger but needs different wording. Umami also records the
    operating system from the user agent, which should either be added to the
    stored list or stripped at the edge.
-6. **Public figures.** The landing page shows page views per project. Which
+5. **Public figures.** The landing page shows page views per project. Which
    figures may be public, and should projects opt in?
-7. **Contract ownership.** Contracts are confirmed by an operator today. Can
+6. **Contract ownership.** Contracts are confirmed by an operator today. Can
    ownership be verified automatically, for example from the contract's admin
    or deployer?
-8. **On-chain backfill.** Horizon covers account history, but contract events
+7. **On-chain backfill.** Horizon covers account history, but contract events
    older than RPC's window need another source, such as SDF's Hubble dataset.
-9. **Spike before building.** Check against the pinned Umami version that it
+8. **Spike before building.** Check against the pinned Umami version that it
    reads the country from `cf-ipcountry`, accepts the pseudonym in
    `CLIENT_IP_HEADER`, and never falls back to a GeoIP lookup on it.
 
@@ -822,4 +820,4 @@ screens. These are the changes:
 | Monorepo with code, infrastructure-as-code, docs, runbooks, onboarding guide, tests, compliance docs and monitoring | 8, 10 |
 | Live adoption: at least 3 SCF projects on web analytics and 1 on API analytics, with operator and tenant views | 13 |
 | 12-month hosting and support window, service levels and handover | 9 |
-| OSI-approved open-source license | 14 (to add) |
+| OSI-approved open-source license | MIT, see [`LICENSE`](../LICENSE) |
