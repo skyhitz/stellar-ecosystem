@@ -2,6 +2,7 @@
   "name": "stellar-ecosystem",
   "private": true,
   "description": "Stellar Ecosystem Stats: web and API analytics for projects built on Stellar.",
+  "license": "MIT",
   "scripts": {
     "dev": "pnpm --filter @ses/web dev",
     "build": "pnpm --filter @ses/web build",

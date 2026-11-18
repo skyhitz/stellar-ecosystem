@@ -27,6 +27,9 @@ apps/
 ```
 
 Services and infrastructure will sit alongside `apps/web` as they are added.
+[`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) describes the full planned
+system: ingestion, the OpenTelemetry pipeline, sign-in with Stellar, tenant
+isolation, privacy handling and deployment.
 
 ## Getting started
 
@@ -77,5 +80,8 @@ These are placeholders in the UI today:
 
 ## Licence
 
-No licence has been chosen yet. The fonts bundled in `apps/web/src/fonts` are
-under the SIL Open Font License 1.1.
+The code in this repository is released under the [MIT License](LICENSE).
+
+The fonts bundled in `apps/web/src/fonts` are third-party and keep their own
+licence, the SIL Open Font License 1.1. Each font's licence text sits next to
+its font file.
